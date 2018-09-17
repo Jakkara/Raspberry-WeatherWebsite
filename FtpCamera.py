@@ -34,66 +34,65 @@ camera = PiCamera()
 temperature = (parse_temperature())
 readings = [temperature,temperature,temperature,temperature,temperature]
 
-while True:
-	# get temperature and calculate the time
-	temperature = parse_temperature()
-	readings.pop(0)
-	readings.append(temperature)
-	average_growth_rate = (readings[4] - readings[0]) / 5.0
+# get temperature and calculate the time
+temperature = parse_temperature()
+readings.pop(0)
+readings.append(temperature)
+average_growth_rate = (readings[4] - readings[0]) / 5.0
 
-	# make decisions from growth rate
-	growth_results = ""
-	if average_growth_rate >= 0:
-		growth_results = "Temperature rising: "
-	else:
-		growth_results = "Cooling down: "
-	growth_results += str(average_growth_rate)
+# make decisions from growth rate
+growth_results = ""
+if average_growth_rate >= 0:
+    growth_results = "Temperature rising: "
+else:
+    growth_results = "Cooling down: "
+growth_results += str(average_growth_rate)
 
-	timestamp = datetime.datetime.utcnow()
-	image_filepath = '/home/pi/FtpCamera/photos/' + str(timestamp) + '.jpg'
-	camera.rotation = 180
-	sleep(2)
-	camera.capture(image_filepath)
-	sleep(1)
-	print("Captured photo " + image_filepath)
+timestamp = datetime.datetime.utcnow()
+image_filepath = '/home/pi/FtpCamera/photos/' + str(timestamp) + '.jpg'
+camera.rotation = 180
+sleep(2)
+camera.capture(image_filepath)
+sleep(1)
+print("Captured photo " + image_filepath)
 
 
-	# create an html file from the information
-	with open('index_template.html', 'r') as myfile:
-		index_html = myfile.read()
-		myfile.close()
-	first_part_of_page = index_html[0:index_html.index("<!--HERE-->")] + "Temperature : " + str(temperature)[:4] + " C <br>" + growth_results + " C per minute."
-	second_part_of_the_page = index_html[index_html.index("<!--HERE-->"):]
-	ready_index_html = first_part_of_page + second_part_of_the_page
-	index_file = open("index.html", "w+")
-	index_file.write(ready_index_html)
-	index_file.close()
+# create an html file from the information
+with open('/home/pi/FtpCamera/index_template.html', 'r') as myfile:
+    index_html = myfile.read()
+    myfile.close()
+first_part_of_page = index_html[0:index_html.index("<!--HERE-->")] + "Temperature: " + str(temperature)[:4] + " C <br>" + growth_results + " C per minute."
+second_part_of_the_page = index_html[index_html.index("<!--HERE-->"):]
+ready_index_html = first_part_of_page + second_part_of_the_page
+index_file = open("/home/pi/FtpCamera/index.html", "w+")
+index_file.write(ready_index_html)
+index_file.close()
 
-	# initialize FTP
-	print("Opening FTP connection...")
-	session = ftplib.FTP() # add FTP details depending on site
+# initialize FTP
+print("Opening FTP connection...")
+with open('credentials.pass') as f:
+    content = f.readlines()
+content = [x.strip() for x in content]
+session = ftplib.FTP(content[0],content[1],content[2])
 
-	# transmit image
-	image_file = open(image_filepath, 'rb')
-	session.storbinary('STOR public_html/Raspi/photos/snap.jpg', image_file)  # send the file
-	print("Image sent.")
-	image_file.close()
+# transmit image
+image_file = open(image_filepath, 'rb')
+session.storbinary('STOR public_html/Raspi/photos/snap.jpg', image_file)  # send the file
+print("Image sent.")
+image_file.close()
 
-	# transmit index.html
-	html_filepath = '/home/pi/FtpCamera/index.html'
-	html_file = open(html_filepath, 'rb')
-	session.storbinary('STOR public_html/Raspi/index.html', html_file)
-	print("Index.html sent")
-	html_file.close()
+# transmit index.html
+html_filepath = '/home/pi/FtpCamera/index.html'
+html_file = open(html_filepath, 'rb')
+session.storbinary('STOR public_html/Raspi/index.html', html_file)
+print("Index.html sent")
+html_file.close()
 
-	session.quit()
+session.quit()
 
-	# delete images from local folder
-	if os.path.isfile(image_filepath):
-		print("Deleting local image file...")
-		os.remove(image_filepath)
-	print("Finished run.")
-
-	# pause before next loop
-	sleep(300)
-
+# delete images from local folder
+if os.path.isfile(image_filepath):
+    print("Deleting local image file...")
+    os.remove(image_filepath)
+print("Finished run.")
+open("photos.log", "a").write(str(timestamp))
