@@ -30,15 +30,24 @@ os.system('modprobe w1-therm')      #library for temp readings
 sensor_output_path = '/sys/bus/w1/devices/28-0417618cabff/w1_slave'
 camera = PiCamera()
 
-# initial values for temperature readings
-temperature = (parse_temperature())
-readings = [temperature,temperature,temperature,temperature,temperature]
-
-# get temperature and calculate the time
+# temperature 
 temperature = parse_temperature()
+
+# temperature readings history
+with open('/tmp/templog') as input:
+    readings = input.readlines() 
+readings = [x.strip() for x in readings]
+print(readings)
+
+# calculate the change rate
 readings.pop(0)
 readings.append(temperature)
-average_growth_rate = (readings[4] - readings[0]) / 5.0
+average_growth_rate = (int(readings[4]) - int(readings[0])) / 5.0
+
+# save readings back to file
+with open('/tmp/templog', 'w') as f:
+    for item in readings:
+        f.write("%s\n" % item)
 
 # make decisions from growth rate
 growth_results = ""
@@ -95,4 +104,3 @@ if os.path.isfile(image_filepath):
     print("Deleting local image file...")
     os.remove(image_filepath)
 print("Finished run.")
-open("photos.log", "a").write(str(timestamp))
