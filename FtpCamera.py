@@ -33,16 +33,25 @@ camera = PiCamera()
 # temperature 
 temperature = parse_temperature()
 
+# constant values from file
+with open('credentials.pass') as f:
+    content = f.readlines()
+content = [x.strip() for x in content]
+templog_path = content[3]
+
 # temperature readings history
-with open('/tmp/templog') as input:
-    readings = input.readlines() 
-readings = [x.strip() for x in readings]
+if not os.path.isfile(templog_path):
+    readings = [20,20,20,20,20]
+else:
+    with open('/tmp/templog') as input:
+        readings = input.readlines() 
+        readings = [x.strip() for x in readings]
 print(readings)
 
 # calculate the change rate
 readings.pop(0)
 readings.append(temperature)
-average_growth_rate = (int(readings[4]) - int(readings[0])) / 5.0
+average_growth_rate = (float(readings[4]) - float(readings[0])) / 5.0
 
 # save readings back to file
 with open('/tmp/templog', 'w') as f:
@@ -79,9 +88,6 @@ index_file.close()
 
 # initialize FTP
 print("Opening FTP connection...")
-with open('credentials.pass') as f:
-    content = f.readlines()
-content = [x.strip() for x in content]
 session = ftplib.FTP(content[0],content[1],content[2])
 
 # transmit image
