@@ -34,7 +34,7 @@ camera = PiCamera()
 temperature = parse_temperature()
 
 # constant values from file
-with open('credentials.pass') as f:
+with open('/home/pi/FtpCamera/credentials.pass') as f:
     content = f.readlines()
 content = [x.strip() for x in content]
 templog_path = content[3]
@@ -66,12 +66,12 @@ else:
     growth_results = "Cooling down: "
 growth_results += str(average_growth_rate)
 
+# take photo
 timestamp = datetime.datetime.utcnow()
 image_filepath = '/home/pi/FtpCamera/photos/' + str(timestamp) + '.jpg'
 camera.rotation = 180
 sleep(2)
 camera.capture(image_filepath)
-sleep(1)
 print("Captured photo " + image_filepath)
 
 
@@ -90,11 +90,17 @@ index_file.close()
 print("Opening FTP connection...")
 session = ftplib.FTP(content[0],content[1],content[2])
 
-# transmit image
-image_file = open(image_filepath, 'rb')
-session.storbinary('STOR public_html/Raspi/photos/snap.jpg', image_file)  # send the file
-print("Image sent.")
-image_file.close()
+# transmit, then remove image
+if os.path.isfile(image_filepath):
+    image_file = open(image_filepath, 'rb')
+    session.storbinary('STOR public_html/Raspi/photos/snap.jpg', image_file)  # send the file
+    print("Image sent.")
+    image_file.close()
+    print("Deleting local image file...")
+    os.remove(image_filepath)
+else:
+    print('Photo not found.')
+
 
 # transmit index.html
 html_filepath = '/home/pi/FtpCamera/index.html'
@@ -105,8 +111,4 @@ html_file.close()
 
 session.quit()
 
-# delete images from local folder
-if os.path.isfile(image_filepath):
-    print("Deleting local image file...")
-    os.remove(image_filepath)
 print("Finished run.")
